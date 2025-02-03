@@ -1,12 +1,15 @@
 # Define variables
-$pat = '<YOUR_PERSONAL_ACCESS_TOKEN_GOES_HERE>'
+# To create the environment variable, use the following command in PowerShell:
+# $env:ADODrillDown_PAT = "your_personal_access_token"
+$pat = $env:ADODrillDown_PAT
 $restApiVersion = '7.1'
+$daysAgo = -30  # Variable for the number of days ago
 
 # Initialize a set to store unique committers
 $committers = [System.Collections.Generic.HashSet[string]]::new()
 
-# Calculate the date 30 days ago
-$commitsStartDate = (Get-Date).AddDays(-4500).ToString("yyyy-MM-ddTHH:mm:ssZ")
+# Calculate the date based on the variable
+$commitsStartDate = (Get-Date).AddDays($daysAgo).ToString("yyyy-MM-ddTHH:mm:ssZ")
 
 # Create the authorization header
 $headers = @{
@@ -17,10 +20,6 @@ $headers = @{
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Define the path to the input CSV file
-# The files is an ADO Export of all organizations from the tenant
-# i.e. Organization Settings -> Microsoft Entra -> Download button
-# Place the Downloaded file in the same folder as this script and 
-# set the correct file name in the $csvOrgsPath variable.
 $csvOrgsPath = Join-Path -Path $scriptDir -ChildPath 'Azure_DevOps_Organizations_2025-01-31_Sample.csv'
 
 # Define the path to the output CSV file
@@ -32,10 +31,14 @@ $csvCommitters = New-Object System.IO.StreamWriter($csvPath)
 # Read the input CSV file
 $csvOrgs = Import-Csv -Path $csvOrgsPath
 
+# Initialize the counter
+$counter = 0
+
 # Iterate through each row in the input CSV file
 $csvOrgs | ForEach-Object {
+    $counter++
     $orgName = $_."Organization Name"
-    Write-Host $orgName -ForegroundColor Green
+    Write-Host "$counter. $orgName" -ForegroundColor Green
 
     # Construct the API URL for projects
     $projectsUri = "https://dev.azure.com/$orgName/_apis/projects?api-version=$restApiVersion"
@@ -61,10 +64,16 @@ $csvOrgs | ForEach-Object {
         return
     }
 
+    # Check if the list of projects is empty
+    if ($projectsResponse.value.Count -eq 0) {
+        Write-Host "0 Projects" -ForegroundColor Yellow
+        return
+    }
+
     # Iterate through each project
     $projectsResponse.value | ForEach-Object {
         $projectName = $_.name
-        Write-Output "Project: $projectName"
+        Write-Host "Project: $projectName"
 
         # Construct the API URL for repositories
         $repoUri = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories?api-version=$restApiVersion"
@@ -76,7 +85,7 @@ $csvOrgs | ForEach-Object {
         $reposResponse.value | ForEach-Object {
             $repoName = $_.name
             $repoId = $_.id
-            Write-Output "  Repository: $repoName"
+            Write-Host "  Repository: $repoName"
 
             # Construct the API URL for commits with date filter
             $commitsUri = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories/$repoId/commits?searchCriteria.fromDate=$commitsStartDate&api-version=$restApiVersion"
@@ -95,7 +104,7 @@ $csvOrgs | ForEach-Object {
                 $authorName = $_.author.name
                 if ($committers.Add($authorName)) {
                     $csvCommitters.WriteLine("$orgName,$projectName,$repoName,$authorName")
-                    Write-Output $authorName
+                    Write-Host $authorName
                 }
             }
         }
