@@ -16,14 +16,18 @@ $headers = @{
     Authorization = "Basic " + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes(":$pat"))
 }
 
-# Get the directory of the current script
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-
 # Define the path to the input CSV file
+# The file is an ADO Export of all organizations from the tenant
+# i.e. Organization Settings -> Microsoft Entra -> Download button
+# Place the downloaded file in the same folder as this script and 
+# set the correct file name in the $csvOrgsPath variable.
 $csvOrgsPath = Join-Path -Path $scriptDir -ChildPath 'Azure_DevOps_Organizations_2025-01-31_Sample.csv'
 
 # Define the path to the output CSV file
 $csvPath = Join-Path -Path $scriptDir -ChildPath 'committers.csv'
+
+# Get the directory of the current script
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Open CSV file for writing
 $csvCommitters = New-Object System.IO.StreamWriter($csvPath)
