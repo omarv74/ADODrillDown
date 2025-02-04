@@ -27,7 +27,7 @@ $ADOReposInventory = Join-Path -Path $scriptDir -ChildPath "ADOReposInventory_$t
 $ADOReposInventory = New-Object System.IO.StreamWriter($ADOReposInventory)
 
 # Write the header to the output CSV file
-$ADOReposInventory.WriteLine("OrganizationName,ProjectName,GitRepoName")
+$ADOReposInventory.WriteLine("OrganizationName,ProjectName,GitRepoName,LastCommit")
 
 # Read the input CSV file
 $csvOrgs = Import-Csv -Path $csvOrgsPath
@@ -54,6 +54,17 @@ $csvOrgs | ForEach-Object {
             $projectName = $project.name
 
             try {
+                # Define the API endpoint for checking TFVC items
+                $tfvcUrl = "https://dev.azure.com/$orgName/$projectName/_apis/tfvc/items?api-version=$restApiVersion"
+
+                # Make the API call to check for TFVC items
+                $tfvcResponse = Invoke-RestMethod -Uri $tfvcUrl -Headers $headers -Method 'GET'
+
+                # If TFVC items are found, add a line to the CSV file
+                if ($tfvcResponse.value.Count -gt 0) {
+                    $ADOReposInventory.WriteLine("$orgName,$projectName,*TFVC*,N/A")
+                }
+
                 # Define the API endpoint for listing Git repositories
                 $reposUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories?api-version=$restApiVersion"
 
@@ -63,10 +74,27 @@ $csvOrgs | ForEach-Object {
                 # Process the response and write Git repository details to the output CSV file
                 foreach ($repo in $reposResponse.value) {
                     $gitRepoName = $repo.name
-                    $ADOReposInventory.WriteLine("$orgName,$projectName,$gitRepoName")
+
+                    try {
+                        # Define the API endpoint for getting the most recent commit
+                        $commitsUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories/$gitRepoName/commits?api-version=$restApiVersion&$top=1"
+
+                        # Make the API call to get the most recent commit
+                        $commitsResponse = Invoke-RestMethod -Uri $commitsUrl -Headers $headers -Method 'GET'
+
+                        # Get the timestamp of the most recent commit
+                        $lastCommit = $commitsResponse.value[0].committer.date
+
+                        # Write the details to the CSV file
+                        $ADOReposInventory.WriteLine("$orgName,$projectName,$gitRepoName,$lastCommit")
+                    } catch {
+                        $lastCommit = "Unauthorized."
+                        $ADOReposInventory.WriteLine("$orgName,$projectName,$gitRepoName,$lastCommit")
+                        Write-Host "Error retrieving the most recent commit: $_" -ForegroundColor Red
+                    }
                 }
             } catch {
-                Write-Host "Error retrieving repositories: $_" -ForegroundColor Red
+                Write-Host "Error retrieving repositories or TFVC items: $_" -ForegroundColor Red
             }
         }
     } catch {
