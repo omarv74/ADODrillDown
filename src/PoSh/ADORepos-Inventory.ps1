@@ -42,27 +42,35 @@ $csvOrgs | ForEach-Object {
 
     Write-Host "$counter. $orgName" -ForegroundColor Green
 
-    # Define the API endpoint for listing projects
-    $projectsUrl = "https://dev.azure.com/$orgName/_apis/projects?api-version=$restApiVersion"
+    try {
+        # Define the API endpoint for listing projects
+        $projectsUrl = "https://dev.azure.com/$orgName/_apis/projects?api-version=$restApiVersion"
 
-    # Make the API call to get the list of projects
-    $response = Invoke-RestMethod -Uri $projectsUrl -Headers $headers -Method 'GET'
+        # Make the API call to get the list of projects
+        $response = Invoke-RestMethod -Uri $projectsUrl -Headers $headers -Method 'GET'
 
-    # Process the response and get the list of projects
-    foreach ($project in $response.value) {
-        $projectName = $project.name
+        # Process the response and get the list of projects
+        foreach ($project in $response.value) {
+            $projectName = $project.name
 
-        # Define the API endpoint for listing Git repositories
-        $reposUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories?api-version=$restApiVersion"
+            try {
+                # Define the API endpoint for listing Git repositories
+                $reposUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories?api-version=$restApiVersion"
 
-        # Make the API call to get the list of Git repositories
-        $reposResponse = Invoke-RestMethod -Uri $reposUrl -Headers $headers -Method 'GET'
+                # Make the API call to get the list of Git repositories
+                $reposResponse = Invoke-RestMethod -Uri $reposUrl -Headers $headers -Method 'GET'
 
-        # Process the response and write Git repository details to the output CSV file
-        foreach ($repo in $reposResponse.value) {
-            $gitRepoName = $repo.name
-            $ADOReposInventory.WriteLine("$orgName,$projectName,$gitRepoName")
+                # Process the response and write Git repository details to the output CSV file
+                foreach ($repo in $reposResponse.value) {
+                    $gitRepoName = $repo.name
+                    $ADOReposInventory.WriteLine("$orgName,$projectName,$gitRepoName")
+                }
+            } catch {
+                Write-Host "Error retrieving repositories: $_" -ForegroundColor Red
+            }
         }
+    } catch {
+        Write-Host "Error retrieving projects: $_" -ForegroundColor Red
     }
 }
 
