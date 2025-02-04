@@ -2,7 +2,7 @@
 # To create the environment variable, use the following command in PowerShell:
 # $env:ADODrillDown_PAT = "your_personal_access_token"
 $pat = $env:ADODrillDown_PAT
-$restApiVersion = '7.1'
+$restApiVersion = '7.1-preview.1'
 $daysAgo = -30  # Variable for the number of days ago
 
 # Initialize a set to store unique committers
@@ -43,7 +43,31 @@ $counter = 0
 $csvOrgs | ForEach-Object {
     $counter++
     $orgName = $_."Organization Name"
+    $adoGroupPCA = $null
+
     Write-Host "$counter. $orgName" -ForegroundColor Green
+
+    # Check Access by trying to retrieve the Org's PCA Group
+    $groupsListUri = "https://vssps.dev.azure.com/$orgName/_apis/graph/groups?api-version=$restApiVersion"
+
+    # Set to Null b/c Invoke-RestMethod will not clear the value from the previous loop iteration
+    # when certain server-side errors occur. Those errors will sometimes not end in the catch block.
+    # Need additional research or OSS community contribution to improve.
+    $responseGroupsList = $null 
+    try {
+        $responseGroupsList = Invoke-RestMethod -Uri $groupsListUri -Method 'GET' -Headers $headers
+        $groupsList = $responseGroupsList.value | Where-Object { $_.displayName -eq "Project Collection Administrators" -and $_.domain -like "*Framework/IdentityDomain*" }
+
+        if ($groupsList.Count -ne 1) {
+            Write-Host "   Error: Expected 1 Group named 'Project Collection Administrators'. Retrieved $(groupList.Count)" -ForegroundColor Yellow
+            return
+        }
+        $adoGroupPCA = $groupsList[0]
+    }
+    catch {
+        Write-Host "   Failed to retrieve groups for organization '$orgName'." -ForegroundColor Red
+        return
+    }
 
     # Construct the API URL for projects
     $projectsUri = "https://dev.azure.com/$orgName/_apis/projects?api-version=$restApiVersion"
