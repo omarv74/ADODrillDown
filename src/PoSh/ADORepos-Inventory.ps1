@@ -77,7 +77,7 @@ $csvOrgs | ForEach-Object {
 
                     try {
                         # Define the API endpoint for getting the most recent commit
-                        $commitsUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories/$gitRepoName/commits?api-version=$restApiVersion&$top=1"
+                        $commitsUrl = "https://dev.azure.com/$orgName/$projectName/_apis/git/repositories/$gitRepoName/commits?&searchCriteria.$top=1&searchCriteria.$order=desc&api-version=$restApiVersion"
 
                         # Make the API call to get the most recent commit
                         $commitsResponse = Invoke-RestMethod -Uri $commitsUrl -Headers $headers -Method 'GET'
