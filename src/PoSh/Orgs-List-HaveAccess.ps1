@@ -22,7 +22,7 @@ $csvOutputPath = Join-Path -Path $scriptDir -ChildPath "OrgsAndAccess_$timestamp
 
 # Open CSV file for writing
 $csvOutputWriter = New-Object System.IO.StreamWriter($csvOutputPath)
-$csvOutputWriter.WriteLine("OrganizationName,HaveAccess")
+$csvOutputWriter.WriteLine("OrganizationName,OrgOwnerEmail,HaveAccess")
 
 # Read the CSV file and get the organization names from the second field
 $csvOrgsList = Import-Csv -Path $csvOrgsDownloadPath
@@ -30,6 +30,7 @@ $csvOrgsList = Import-Csv -Path $csvOrgsDownloadPath
 # Iterate through each csvOrg and execute the existing code for each organization
 foreach ($csvOrg in $csvOrgsList) {
     $orgName = $csvOrg."Organization Name"
+    $orgOwnerEmail = $csvOrg.Owner
 
     $groupsListUri = "https://vssps.dev.azure.com/$orgName/_apis/graph/groups?api-version=$restApiVersion"
 
@@ -44,12 +45,12 @@ foreach ($csvOrg in $csvOrgsList) {
         # Output the members
         $groupsList | ForEach-Object {
             # Write-Output $_.principalName
-            $csvOutputWriter.WriteLine("$orgName,TRUE")
+            $csvOutputWriter.WriteLine("$orgName,$orgOwnerEmail,TRUE")
         }
     }
     catch {
         # Write-Error "Failed to retrieve groups for organization '$orgName'."
-        $csvOutputWriter.WriteLine("$orgName,FALSE")
+        $csvOutputWriter.WriteLine("$orgName,$orgOwnerEmail,FALSE")
     }
 }
 
