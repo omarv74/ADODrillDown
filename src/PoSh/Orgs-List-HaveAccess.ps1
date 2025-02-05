@@ -2,7 +2,7 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 
 # Define the path to the CSV file
-$csvOrgsList = Join-Path -Path $scriptDir -ChildPath "Azure_DevOps_Organizations_2025-01-31_Sample.csv"
+$csvOrgsDownloadPath = Join-Path -Path $scriptDir -ChildPath "Azure_DevOps_Organizations_2025-01-31_Sample.csv"
 
 # To create the environment variable, use the following command in PowerShell:
 # $env:ADODrillDown_PAT = "your_personal_access_token"
@@ -25,11 +25,11 @@ $csvOutputWriter = New-Object System.IO.StreamWriter($csvOutputPath)
 $csvOutputWriter.WriteLine("OrganizationName,HaveAccess")
 
 # Read the CSV file and get the organization names from the second field
-$csvData = Import-Csv -Path $csvOrgsList
+$csvOrgsList = Import-Csv -Path $csvOrgsDownloadPath
 
-# Iterate through each row and execute the existing code for each organization
-foreach ($row in $csvData) {
-    $orgName = $row."Organization Name"
+# Iterate through each csvOrg and execute the existing code for each organization
+foreach ($csvOrg in $csvOrgsList) {
+    $orgName = $csvOrg."Organization Name"
 
     $groupsListUri = "https://vssps.dev.azure.com/$orgName/_apis/graph/groups?api-version=$restApiVersion"
 
