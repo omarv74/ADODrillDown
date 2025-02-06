@@ -52,7 +52,7 @@ foreach ($csvOrg in $csvOrgsList) {
     }
     catch {
         # Write-Error "Failed to retrieve groups for organization '$orgName'."
-        $csvOutputWriter.WriteLine("$orgName,$orgOwnerEmail,0")
+        $csvOutputWriter.WriteLine("$orgName,$orgOwnerEmail,Unauthorized")
     }
 }
 
